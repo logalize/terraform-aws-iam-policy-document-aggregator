@@ -1,0 +1,143 @@
+#
+# This is the canonical configuration for the `README.md`
+# Run `make readme` to rebuild the `README.md`
+#
+
+# Name of this project
+name: terraform-aws-iam-policy-document-aggregator
+# Tags of this project
+tags:
+  - aws
+  - terraform
+  - terraform-modules
+  - iam
+  - policy
+  - role
+  - policy-document
+# Categories of this project
+categories:
+  - terraform-modules/iam
+# Logo for this project
+#logo: docs/logo.png
+
+# License of this project
+license: "APACHE2"
+# Canonical GitHub repo
+github_repo: cloudposse/terraform-aws-iam-policy-document-aggregator
+# Badges to display
+badges:
+  - name: "Latest Release"
+    image: "https://img.shields.io/github/release/cloudposse/terraform-aws-iam-policy-document-aggregator.svg"
+    url: "https://github.com/cloudposse/terraform-aws-iam-policy-document-aggregator/releases/latest"
+  - name: "Slack Community"
+    image: "https://slack.cloudposse.com/badge.svg"
+    url: "https://slack.cloudposse.com"
+related:
+  - name: "terraform-aws-iam-role"
+    description: "A Terraform module that creates IAM role with provided JSON IAM polices documents."
+    url: "https://github.com/cloudposse/terraform-aws-iam-role"
+  - name: "terraform-aws-iam-chamber-s3-role"
+    description: "Terraform module to provision an IAM role with configurable permissions to access S3 as chamber backend."
+    url: "https://github.com/cloudposse/terraform-aws-iam-chamber-s3-role"
+# Short description of this project
+description: |-
+  Terraform module to aggregate multiple IAM policy documents into single policy document.
+
+  # NOTE: This module is now deprecated due to new functionality in the Terraform AWS Provider. See below on migration steps
+
+  Now that the AWS provider supports the `override_policy_documents` argument on the `aws_iam_policy_document` data source, this module is no longer necessary. All code using this module can be migrated to natively use the `aws_iam_policy_document` data source by doing the following change:
+
+  ```hcl
+  # Previous module usage:
+  module "aggregated_policy" {
+    source  = "cloudposse/iam-policy-document-aggregator/aws"
+    version = "0.8.0"
+
+    source_documents = [
+      data.aws_iam_policy_document.base.json,
+      data.aws_iam_policy_document.resource_full_access.json
+    ]
+  }
+  ```
+
+  Replace the above with: 
+  ```hcl
+  data "aws_iam_policy_document" "aggregated" {
+    override_policy_documents = [
+      data.aws_iam_policy_document.base.json,
+      data.aws_iam_policy_document.resource_full_access.json
+    ]
+  }
+  ```
+
+  And then update your references to `module.aggregated_policy.result_document` with `data.aws_iam_policy_document.aggregated.json`. 
+
+  Please see the discussion in #31 for further details.
+
+# How to use this project
+usage: |-
+  For a complete example, see [examples/complete](examples/complete).
+
+  For automated tests of the complete example using [bats](https://github.com/bats-core/bats-core) and [Terratest](https://github.com/gruntwork-io/terratest) (which tests and deploys the example on AWS), see [test](test).
+
+  This example creates a single IAM policy document from multiple IAM policy documents.
+
+  ```hcl
+    data "aws_iam_policy_document" "resource_full_access" {
+      statement {
+        sid       = "FullAccess"
+        effect    = "Allow"
+        resources = ["arn:aws:s3:::bucketname/path/*"]
+
+        actions = [
+          "s3:PutObject",
+          "s3:PutObjectAcl",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:ListBucketMultipartUploads",
+          "s3:GetBucketLocation",
+          "s3:AbortMultipartUpload"
+        ]
+      }
+    }
+
+    data "aws_iam_policy_document" "base" {
+      statement {
+        sid       = "BaseAccess"
+        effect    = "Allow"
+        resources = ["*"]
+
+        actions = [
+          "s3:ListBucket",
+          "s3:ListBucketVersions"
+        ]
+      }
+    }
+
+    module "aggregated_policy" {
+      source = "cloudposse/iam-policy-document-aggregator/aws"
+      # Cloud Posse recommends pinning every module to a specific version
+      # version = "x.x.x"
+
+      source_documents = [
+        data.aws_iam_policy_document.base.json,
+        data.aws_iam_policy_document.resource_full_access.json
+      ]
+  }
+  ```
+
+  ### Additional Examples
+  The [`example`](./example) directory contains the example.
+include:
+  - "docs/terraform.md"
+# Contributors to this project
+contributors:
+  - name: "Igor Rodionov"
+    github: "goruha"
+  - name: "Maxim Mironenko"
+    github: "maximmi"
+  - name: "Erik Osterman"
+    github: "osterman"
+  - name: "Andriy Knysh"
+    github: "aknysh"
